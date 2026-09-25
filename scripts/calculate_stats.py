@@ -28,6 +28,7 @@ def calculate_dataset_stats(data_dir: str = "data/raw/train", num_samples: int =
     for ext in (".npy", ".npz", ".tif", ".tiff"):
         files.extend(glob.glob(os.path.join(data_dir, f"*{ext}")))
         files.extend(glob.glob(os.path.join(data_dir, "**", f"*{ext}"), recursive=True))
+    files = sorted(list(set(files)))
 
     if not files:
         print("[INFO] No train files found. Using synthetic statistics for 16 bands.")

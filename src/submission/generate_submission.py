@@ -122,6 +122,8 @@ def parse_args():
     parser.add_argument("--predictions", type=str, default="outputs/predictions/predictions.json", help="Path to predictions JSON")
     parser.add_argument("--output", type=str, default="outputs/submissions/submission.csv", help="Path to output submission CSV")
     parser.add_argument("--conf-threshold", type=float, default=0.05, help="Confidence threshold")
+    parser.add_argument("--sample-submission", type=str, default=None, help="Path to competition sample_submission.csv for format verification")
+    parser.add_argument("--copy-to", type=str, default=None, help="Additional output destination (e.g. /kaggle/working/submission.csv)")
     return parser.parse_args()
 
 
@@ -152,8 +154,32 @@ def main():
 
     df = create_submission_dataframe(preds, conf_threshold=args.conf_threshold)
     df.to_csv(args.output, index=False)
-    print(f"Generated submission file with {len(df)} predictions at: {args.output}")
+    print(f"Generated submission file with {len(df)} predictions across {df['image_id'].nunique() if len(df) > 0 else 0} unique test images at: {args.output}")
     print(f"Column data types:\n{df.dtypes}")
+
+    # Copy to secondary location (e.g. /kaggle/working/submission.csv) if requested
+    if args.copy_to:
+        import shutil
+        os.makedirs(os.path.dirname(args.copy_to) or ".", exist_ok=True)
+        shutil.copy2(args.output, args.copy_to)
+        print(f"Successfully copied submission to: {args.copy_to}")
+
+    # Validate against sample_submission if provided
+    if args.sample_submission and os.path.isfile(args.sample_submission):
+        sample_df = pd.read_csv(args.sample_submission)
+        print(f"\n[VALIDATION AGAINST SAMPLE SUBMISSION]")
+        print(f"Sample submission shape: {sample_df.shape}")
+        print(f"Sample columns: {list(sample_df.columns)}")
+        if "image_id" in sample_df.columns:
+            sample_ids = set(sample_df["image_id"].dropna().unique())
+            pred_ids = set(df["image_id"].dropna().unique()) if len(df) > 0 else set()
+            overlap = sample_ids.intersection(pred_ids)
+            print(f"Unique test images in sample submission: {len(sample_ids)}")
+            print(f"Test images with model predictions: {len(overlap)} / {len(sample_ids)}")
+            if len(overlap) == 0 and len(sample_ids) > 0:
+                print("[WARNING] Zero image_id overlap with sample submission! Check test image filename parsing.")
+            else:
+                print(f"[SUCCESS] {len(overlap)} matching image IDs confirmed!")
 
 
 if __name__ == "__main__":

@@ -27,6 +27,9 @@ from training.trainer import Trainer
 def parse_args():
     parser = argparse.ArgumentParser(description="Train Hyperspectral Object Detector")
     parser.add_argument("--config", type=str, default="configs/spectral_attention.yaml", help="Path to config YAML")
+    parser.add_argument("--data-dir", type=str, default=None, help="Root raw dataset directory")
+    parser.add_argument("--annotations-dir", type=str, default=None, help="Path to annotations directory")
+    parser.add_argument("--save-dir", type=str, default=None, help="Directory to save checkpoints")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
     parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
     parser.add_argument("--batch-size", type=int, default=None, help="Override batch size")
@@ -43,6 +46,12 @@ def main():
         cfg = yaml.safe_load(f)
 
     # CLI overrides
+    if args.data_dir is not None:
+        cfg.setdefault("data", {})["raw_dir"] = args.data_dir
+    if args.annotations_dir is not None:
+        cfg.setdefault("data", {})["annotations_dir"] = args.annotations_dir
+    if args.save_dir is not None:
+        cfg.setdefault("training", {})["save_dir"] = args.save_dir
     if args.epochs is not None:
         cfg.setdefault("training", {})["epochs"] = args.epochs
     if args.batch_size is not None:
@@ -80,9 +89,28 @@ def main():
     if use_synthetic:
         print("[INFO] No raw dataset files detected in data/raw. Running with generated hyperspectral cubes for verification.")
 
+    train_split = data_cfg.get("train_split", "data/splits/train.txt")
+    val_split = data_cfg.get("val_split", "data/splits/val.txt")
+    if not use_synthetic and (not os.path.exists(train_split) or not os.path.exists(val_split)):
+        try:
+            from scripts.create_split import create_split
+            print("[INFO] Generating train/val 80/20 splits...")
+            create_split(data_dir=raw_dir, val_ratio=0.2, output_dir=os.path.dirname(train_split) or "data/splits")
+        except Exception as e:
+            print(f"[WARNING] Could not create split automatically ({e}). Proceeding without split filtering.")
+            train_split = None
+            val_split = None
+
+    ann_file = data_cfg.get("annotations_dir", None)
+    if ann_file is None and os.path.isdir(os.path.join(raw_dir, "annotations")):
+        ann_file = os.path.join(raw_dir, "annotations")
+    elif ann_file is None and os.path.isdir(os.path.join(raw_dir, "train")):
+        ann_file = os.path.join(raw_dir, "train")
+
     train_dataset = HyperspectralDataset(
-        data_dir=raw_dir,
-        split_file=data_cfg.get("train_split", "data/splits/train.txt"),
+        data_dir=os.path.join(raw_dir, "train") if os.path.isdir(os.path.join(raw_dir, "train")) else raw_dir,
+        split_file=train_split,
+        annotations_file=ann_file,
         mode=cfg.get("model", {}).get("mode", "16band"),
         selected_bands=cfg.get("model", {}).get("selected_bands", [2, 7, 15]),
         transforms=train_transforms,
@@ -92,8 +120,9 @@ def main():
     )
 
     val_dataset = HyperspectralDataset(
-        data_dir=raw_dir,
-        split_file=data_cfg.get("val_split", "data/splits/val.txt"),
+        data_dir=os.path.join(raw_dir, "train") if os.path.isdir(os.path.join(raw_dir, "train")) else raw_dir,
+        split_file=val_split,
+        annotations_file=ann_file,
         mode=cfg.get("model", {}).get("mode", "16band"),
         selected_bands=cfg.get("model", {}).get("selected_bands", [2, 7, 15]),
         transforms=val_transforms,

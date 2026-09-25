@@ -69,6 +69,7 @@ class HyperspectralDataset(Dataset):
             for ext in allowed_extensions:
                 found_files.extend(glob.glob(os.path.join(data_dir, f"*{ext}")))
                 found_files.extend(glob.glob(os.path.join(data_dir, "**", f"*{ext}"), recursive=True))
+        found_files = sorted(list(set(found_files)))
 
         # Filter by split if provided
         valid_ids = None

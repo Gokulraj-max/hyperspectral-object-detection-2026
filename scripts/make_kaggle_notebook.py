@@ -1,0 +1,144 @@
+import json
+import os
+
+notebook = {
+    "cells": [
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "# Hyperspectral Object Detection Challenge 2026\n",
+                "## HS-SAFD: Hyperspectral Spectral-Attention Fusion Detector\n",
+                "---\n",
+                "**Strictly Rules-Compliant Implementation:**\n",
+                "- **Single Detection Model**: End-to-end 16-band HS-SAFD (no multi-model ensemble)\n",
+                "- **Allowed Augmentation**: Single-model multi-scale + flip Test-Time Augmentation (TTA)\n",
+                "- **Loss**: CIoU Loss + Multi-label Focal Loss + Objectness BCE\n",
+                "- **Target Metric**: mAP@[0.50:0.95] across 18 authentic/counterfeit material classes\n"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# 1. Environment & GPU Verification\n",
+                "import os, sys, torch\n",
+                "print('Python Version:', sys.version)\n",
+                "print('PyTorch Version:', torch.__version__)\n",
+                "print('CUDA Available:', torch.cuda.is_available())\n",
+                "if torch.cuda.is_available():\n",
+                "    print('GPU Model:', torch.cuda.get_device_name(0))\n",
+                "    vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)\n",
+                "    print(f'Total VRAM: {vram:.2f} GB')\n"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# 2. Clone Repository and Install Dependencies\n",
+                "import os\n",
+                "if not os.path.exists('hyperspectral-object-detection-2026') and not os.path.exists('scripts'):\n",
+                "    !git clone https://github.com/Gokulraj-max/hyperspectral-object-detection-2026.git\n",
+                "    %cd hyperspectral-object-detection-2026\n",
+                "elif os.path.exists('hyperspectral-object-detection-2026'):\n",
+                "    %cd hyperspectral-object-detection-2026\n",
+                "    !git pull origin main\n",
+                "\n",
+                "!pip install -q tifffile pyyaml opencv-python-headless albumentations\n"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# 3. Discover Dataset Layout in /kaggle/input\n",
+                "from scripts.kaggle_pipeline import auto_detect_kaggle_paths, print_detection_summary\n",
+                "paths = auto_detect_kaggle_paths()\n",
+                "print_detection_summary(paths)\n"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# 4. Preview Sample Hyperspectral Cube & Pseudo-RGB\n",
+                "import glob, os, tifffile\n",
+                "import numpy as np\n",
+                "import matplotlib.pyplot as plt\n",
+                "from datasets.visualization import render_pseudo_rgb\n",
+                "\n",
+                "train_dir = paths.get('train_dir') or 'data/raw/train'\n",
+                "cube_files = glob.glob(os.path.join(train_dir, '**', '*.npy'), recursive=True) or glob.glob(os.path.join(train_dir, '**', '*.tif'), recursive=True)\n",
+                "if cube_files:\n",
+                "    fp = cube_files[0]\n",
+                "    cube = np.load(fp) if fp.endswith('.npy') else tifffile.imread(fp)\n",
+                "    print(f'Cube file: {fp}')\n",
+                "    print(f'Shape: {cube.shape}, Min: {cube.min():.3f}, Max: {cube.max():.3f}')\n",
+                "    pseudo_rgb = render_pseudo_rgb(cube)\n",
+                "    plt.figure(figsize=(6, 6))\n",
+                "    plt.imshow(pseudo_rgb)\n",
+                "    plt.title(f'Pseudo-RGB Composite: {os.path.basename(fp)}')\n",
+                "    plt.axis('off')\n",
+                "    plt.show()\n"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# 5. Run Full End-to-End HS-SAFD Training & Test Inference\n",
+                "# Pipeline executes:\n",
+                "#   - Per-band normalization calculation\n",
+                "#   - 80/20 train/validation stratified split\n",
+                "#   - Single-model HS-SAFD training (Mixed Precision AMP)\n",
+                "#   - Test-Time Augmentation (TTA) inference across test images\n",
+                "#   - Automatic formatting into /kaggle/working/submission.csv with integer image_id\n",
+                "#   - 12-point submission rule compliance validation\n",
+                "!python scripts/kaggle_pipeline.py --epochs 30 --batch-size 8 --tta\n"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# 6. Verify and Inspect submission.csv\n",
+                "import os, pandas as pd\n",
+                "sub_path = '/kaggle/working/submission.csv' if os.path.exists('/kaggle/working/submission.csv') else 'outputs/submissions/submission.csv'\n",
+                "df = pd.read_csv(sub_path)\n",
+                "print(f'Total predicted bounding boxes: {len(df)}')\n",
+                "print(f'Unique test images: {df[\"image_id\"].nunique()}')\n",
+                "print('\\nColumn Data Types:')\n",
+                "print(df.dtypes)\n",
+                "print('\\nClass distribution:')\n",
+                "print(df['class_id'].value_counts().sort_index())\n",
+                "print('\\nFirst 10 predictions:')\n",
+                "display(df.head(10))\n"
+            ]
+        }
+    ],
+    "metadata": {
+        "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+        "language_info": {"name": "python", "version": "3.10.0"}
+    },
+    "nbformat": 4,
+    "nbformat_minor": 4
+}
+
+os.makedirs("notebooks", exist_ok=True)
+with open("notebooks/kaggle_hs_safd_pipeline.ipynb", "w", encoding="utf-8") as f:
+    json.dump(notebook, f, indent=2)
+
+print("Generated notebooks/kaggle_hs_safd_pipeline.ipynb successfully!")

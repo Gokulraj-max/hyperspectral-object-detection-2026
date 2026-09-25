@@ -84,6 +84,8 @@ def main():
     elif os.path.isdir(args.input):
         for ext in (".npy", ".npz", ".tif", ".tiff"):
             input_files.extend(glob.glob(os.path.join(args.input, f"*{ext}")))
+            input_files.extend(glob.glob(os.path.join(args.input, "**", f"*{ext}"), recursive=True))
+        input_files = sorted(list(set(input_files)))
     
     if len(input_files) == 0:
         print(f"No test files found in {args.input}. Generating 1 synthetic test sample for demonstration...")
@@ -99,7 +101,7 @@ def main():
 
     all_results = {}
 
-    for fp in input_files:
+    for idx, fp in enumerate(input_files):
         stem = os.path.splitext(os.path.basename(fp))[0]
         cube = load_cube(fp)
         orig_h, orig_w = cube.shape[0], cube.shape[1]
@@ -139,17 +141,18 @@ def main():
             "labels": labels.tolist()
         }
 
-        # Visualize overlay
-        rgb_img = render_pseudo_rgb(cube)
-        vis_img = draw_bounding_boxes(
-            rgb_img,
-            boxes,
-            labels,
-            scores=scores,
-            class_names=CLASS_NAMES
-        )
-        save_vis_path = os.path.join(args.output, f"{stem}_pred.jpg")
-        cv2.imwrite(save_vis_path, cv2.cvtColor(vis_img, cv2.COLOR_RGB2BGR))
+        # Visualize overlay for first 20 images
+        if idx < 20:
+            rgb_img = render_pseudo_rgb(cube)
+            vis_img = draw_bounding_boxes(
+                rgb_img,
+                boxes,
+                labels,
+                scores=scores,
+                class_names=CLASS_NAMES
+            )
+            save_vis_path = os.path.join(args.output, f"{stem}_pred.jpg")
+            cv2.imwrite(save_vis_path, cv2.cvtColor(vis_img, cv2.COLOR_RGB2BGR))
 
     # Save summary JSON
     json_path = os.path.join(args.output, "predictions.json")
