@@ -1,0 +1,42 @@
+# ==========================================
+# Hyperspectral Object Detection Challenge 2026
+# Strict .gitignore: Never commit data, weights, or outputs
+# ==========================================
+
+# Competition Dataset (STRICTLY PROHIBITED TO DISTRIBUTE)
+data/
+*.npy
+*.npz
+*.mat
+*.h5
+*.tif
+*.tiff
+
+# Trained Checkpoints and Model Weights (>100MB)
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Generated Outputs and Predictions
+outputs/
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# IDE and OS artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

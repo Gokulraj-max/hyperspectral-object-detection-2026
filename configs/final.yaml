@@ -1,0 +1,88 @@
+# Final Competition Single Model: HS-SAFD (Hyperspectral Spectral-Attention Fusion Detector)
+# Strictly complies with Competition Rule: Single Detection Model (NO ensemble)
+experiment_name: "exp04_final"
+
+model:
+  name: "hyperspectral_detector"
+  mode: "hs_safd"
+  input_channels: 16
+  num_classes: 18
+
+  spectral_projection:
+    enabled: true
+    mid_channels: 32
+    out_channels: 64
+
+  spectral_attention:
+    enabled: true
+    reduction: 4
+
+  spatial_attention:
+    enabled: true
+    kernel_size: 7
+
+  backbone: "hybrid"
+  spatial_depth: "resnet34"
+  neck: "pan"
+  neck_channels: 128
+  head_channels: 128
+  num_anchors: 3
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  train_split: "data/splits/train.txt"
+  val_split: "data/splits/val.txt"
+  image_size: [512, 512]
+  num_bands: 16
+  wavelength_range: [460.0, 600.0]
+  per_band_norm: true
+  num_workers: 4
+
+training:
+  epochs: 90
+  batch_size: 8
+  gradient_accumulation_steps: 1
+  mixed_precision: true
+  save_dir: "checkpoints/exp04_final"
+  log_interval: 10
+  eval_interval: 1
+  patience: 20
+
+optimizer:
+  type: "AdamW"
+  learning_rate: 0.0004
+  weight_decay: 0.0001
+  betas: [0.9, 0.999]
+
+scheduler:
+  type: "cosine"
+  warmup_epochs: 5
+  min_lr: 1.0e-6
+
+loss:
+  cls_weight: 1.0
+  box_weight: 8.0
+  objectness_weight: 1.0
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  iou_type: "ciou"
+
+augmentation:
+  horizontal_flip: 0.5
+  vertical_flip: 0.5
+  spectral_noise: true
+  spectral_noise_std: 0.02
+  band_dropout: true
+  band_dropout_prob: 0.15
+  spectral_intensity_scale: 0.05
+
+evaluation:
+  conf_threshold: 0.05
+  nms_iou_threshold: 0.50
+  max_detections: 100
+
+test_time_augmentation:
+  enabled: true
+  scales: [0.8, 1.0, 1.2]
+  flips: ["horizontal", "vertical"]

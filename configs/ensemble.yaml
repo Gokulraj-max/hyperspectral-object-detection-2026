@@ -1,0 +1,37 @@
+# Ensemble Configuration (WBF / NMS multi-model fusion)
+experiment_name: "exp06_ensemble"
+
+ensemble:
+  method: "wbf"  # "wbf", "nms", or "soft_nms"
+  iou_threshold: 0.55
+  skip_box_threshold: 0.05
+  conf_type: "avg"  # "avg", "max", or "box_and_model_avg"
+
+models:
+  - name: "rgb_baseline"
+    config: "configs/baseline.yaml"
+    checkpoint: "checkpoints/exp01_rgb_baseline/best.pt"
+    weight: 1.0
+
+  - name: "16band_baseline"
+    config: "configs/hyperspectral.yaml"
+    checkpoint: "checkpoints/exp02_16band/best.pt"
+    weight: 1.5
+
+  - name: "hs_safd"
+    config: "configs/spectral_attention.yaml"
+    checkpoint: "checkpoints/exp04_spectral_attention/best.pt"
+    weight: 2.5
+
+  - name: "high_res"
+    config: "configs/high_resolution.yaml"
+    checkpoint: "checkpoints/exp05_high_resolution/best.pt"
+    weight: 2.0
+
+test_time_augmentation:
+  enabled: true
+  scales: [0.8, 1.0, 1.2]
+  flips: ["horizontal", "vertical"]
+
+output:
+  submission_file: "outputs/submissions/submission_ensemble.csv"

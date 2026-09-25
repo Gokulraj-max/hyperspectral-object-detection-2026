@@ -1,0 +1,28 @@
+============================================================
+HYPERSPECTRAL OBJECT DETECTION CHALLENGE 2026 - MODEL STATS
+============================================================
+Architecture:          hs_safd
+Input Resolution:      512x512 (16 spectral bands, 460-600 nm)
+Total Parameters:      18,593,703
+Trainable Parameters:  18,593,703
+Model Weight Size:     70.93 MB
+Estimated FLOPs:       23.87 GFLOPs
+------------------------------------------------------------
+Per-Band Dataset Statistics (16 Bands):
+  Band  0 (460.0 nm): Mean = 0.2500, Std = 0.1500
+  Band  1 (469.3 nm): Mean = 0.2833, Std = 0.1500
+  Band  2 (478.7 nm): Mean = 0.3167, Std = 0.1500
+  Band  3 (488.0 nm): Mean = 0.3500, Std = 0.1500
+  Band  4 (497.3 nm): Mean = 0.3833, Std = 0.1500
+  Band  5 (506.6 nm): Mean = 0.4167, Std = 0.1500
+  Band  6 (516.0 nm): Mean = 0.4500, Std = 0.1500
+  Band  7 (525.3 nm): Mean = 0.4833, Std = 0.1500
+  Band  8 (534.6 nm): Mean = 0.5167, Std = 0.1500
+  Band  9 (544.0 nm): Mean = 0.5500, Std = 0.1500
+  Band 10 (553.3 nm): Mean = 0.5833, Std = 0.1500
+  Band 11 (562.6 nm): Mean = 0.6167, Std = 0.1500
+  Band 12 (572.0 nm): Mean = 0.6500, Std = 0.1500
+  Band 13 (581.3 nm): Mean = 0.6833, Std = 0.1500
+  Band 14 (590.6 nm): Mean = 0.7167, Std = 0.1500
+  Band 15 (600.0 nm): Mean = 0.7500, Std = 0.1500
+============================================================
