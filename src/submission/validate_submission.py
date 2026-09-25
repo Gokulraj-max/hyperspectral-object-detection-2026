@@ -82,12 +82,15 @@ def validate_submission_file(
     else:
         logs.append("[PASS] Check 3/4 PASSED: Sequential and unique IDs starting at 0")
 
-    # Check 5: Valid image IDs
-    if df["image_id"].isnull().any() or (df["image_id"].astype(str).str.strip() == "").any():
-        logs.append("[FAIL] Check 5 FAILED: Found empty or null image_id values")
+    # Check 5: Valid integer image IDs
+    if not pd.api.types.is_integer_dtype(df["image_id"]):
+        logs.append(f"[FAIL] Check 5 FAILED: image_id must be integer (int64), found dtype '{df['image_id'].dtype}'")
+        is_valid = False
+    elif df["image_id"].isnull().any():
+        logs.append("[FAIL] Check 5 FAILED: Found null/NaN image_id values")
         is_valid = False
     else:
-        logs.append("[PASS] Check 5 PASSED: Valid image IDs")
+        logs.append("[PASS] Check 5 PASSED: Valid integer image IDs (int64)")
 
     # Check 6: Valid classes (0 to 17)
     invalid_classes = df[~df["class_id"].isin(range(NUM_CLASSES))]

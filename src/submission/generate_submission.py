@@ -1,14 +1,17 @@
 """
-Kaggle Submission Generator (Section 23):
-Converts model predictions or prediction dictionaries into standard Kaggle competition format:
+Kaggle Submission Generator:
+Converts model predictions into standard Kaggle competition format:
 id,image_id,class_id,confidence,x1,y1,x2,y2
+
+Ensures image_id is strictly integer (int64), not string or text.
 """
 
 import os
 import sys
+import re
 import argparse
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import pandas as pd
 import numpy as np
 
@@ -16,11 +19,45 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-def create_submission_dataframe(predictions_dict: Dict[str, Dict[str, Any]], conf_threshold: float = 0.05) -> pd.DataFrame:
+def parse_image_id(img_id: Any) -> int:
+    """
+    Parses and casts image_id to integer (int64) as strictly required by Kaggle.
+    Handles:
+    - integers: 1000 -> 1000
+    - string digits: "1000" -> 1000
+    - filenames: "1000.npy" -> 1000, "test_001000.tif" -> 1000
+    - synthetic names: "sample_test_cube" -> deterministic integer
+    """
+    if isinstance(img_id, (int, np.integer)):
+        return int(img_id)
+
+    s = str(img_id).strip()
+    
+    # Strip common file extensions
+    for ext in (".npy", ".npz", ".tif", ".tiff", ".mat", ".jpg", ".jpeg", ".png", ".xml", ".json"):
+        if s.lower().endswith(ext):
+            s = s[:-len(ext)]
+
+    if s.isdigit():
+        return int(s)
+
+    # Extract trailing or contiguous digits if available
+    digits = re.findall(r'\d+', s)
+    if digits:
+        return int(digits[-1])
+
+    # Deterministic integer fallback for synthetic filenames
+    return int(abs(hash(s)) % (10**6) + 1000)
+
+
+def create_submission_dataframe(
+    predictions_dict: Dict[str, Dict[str, Any]],
+    conf_threshold: float = 0.05
+) -> pd.DataFrame:
     """
     Takes predictions dictionary formatted as:
     {
-      "image_id_1": {
+      "1000": {
          "boxes": [[x1, y1, x2, y2], ...],
          "scores": [0.95, ...],
          "labels": [2, ...]
@@ -28,15 +65,17 @@ def create_submission_dataframe(predictions_dict: Dict[str, Dict[str, Any]], con
     }
     and converts it into Kaggle submission DataFrame with columns:
     id,image_id,class_id,confidence,x1,y1,x2,y2
+    Guarantees image_id is strictly int64.
     """
     rows = []
     current_id = 0
 
-    # Ensure deterministic image order
-    sorted_image_ids = sorted(predictions_dict.keys())
+    # Ensure deterministic image order by numerical image_id if possible
+    sorted_image_ids = sorted(predictions_dict.keys(), key=lambda k: (parse_image_id(k), str(k)))
 
-    for img_id in sorted_image_ids:
-        data = predictions_dict[img_id]
+    for raw_img_id in sorted_image_ids:
+        numeric_img_id = parse_image_id(raw_img_id)
+        data = predictions_dict[raw_img_id]
         boxes = data.get("boxes", [])
         scores = data.get("scores", [])
         labels = data.get("labels", [])
@@ -53,8 +92,8 @@ def create_submission_dataframe(predictions_dict: Dict[str, Dict[str, Any]], con
                 continue
 
             rows.append({
-                "id": current_id,
-                "image_id": str(img_id),
+                "id": int(current_id),
+                "image_id": int(numeric_img_id),
                 "class_id": int(l),
                 "confidence": round(score, 4),
                 "x1": int(round(x1)),
@@ -65,6 +104,16 @@ def create_submission_dataframe(predictions_dict: Dict[str, Dict[str, Any]], con
             current_id += 1
 
     df = pd.DataFrame(rows, columns=["id", "image_id", "class_id", "confidence", "x1", "y1", "x2", "y2"])
+    
+    # Enforce integer types explicitly
+    int_cols = ["id", "image_id", "class_id", "x1", "y1", "x2", "y2"]
+    for col in int_cols:
+        if col in df.columns and len(df) > 0:
+            df[col] = pd.to_numeric(df[col], errors="raise").astype("int64")
+
+    if "confidence" in df.columns and len(df) > 0:
+        df["confidence"] = df["confidence"].astype("float64")
+
     return df
 
 
@@ -104,6 +153,7 @@ def main():
     df = create_submission_dataframe(preds, conf_threshold=args.conf_threshold)
     df.to_csv(args.output, index=False)
     print(f"Generated submission file with {len(df)} predictions at: {args.output}")
+    print(f"Column data types:\n{df.dtypes}")
 
 
 if __name__ == "__main__":
