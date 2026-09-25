@@ -11,20 +11,29 @@
 
 ---
 
-## Submission Notes
+## Submission History & Strategy
 
-### Submission 1 (Phase 1 Baseline)
+### Submission #1
+- **Status**: Submitted
 - **Model**: HS-SAFD Single Model
-- **Input**: 16 bands (460–600 nm)
-- **TTA**: No
-- **Confidence Threshold**: 0.20
-- **NMS IoU**: 0.50
-- **Description**: Initial Phase 1 baseline submission on test set.
+- **Notes**: Initial upload.
 
-### Submission 2 (Phase 1 Optimized)
-- **Model**: HS-SAFD Single Model
-- **Input**: 16 bands
-- **TTA**: Yes (Scales: 0.8, 1.0, 1.2; Flips: H, V)
-- **Confidence Threshold**: 0.10
-- **NMS IoU**: 0.55
-- **Description**: Optimized single-model with TTA and CIoU loss.
+### Submission #2 (Corrected int64 Schema)
+- **Status**: Ready for Upload / Submitted
+- **File**: `outputs/submissions/submission.csv`
+- **Model**: HS-SAFD (Single Model + CIoU Loss + TTA)
+- **Fix Applied**: `image_id` strictly converted to `int64` integer type.
+- **Validation**: Passed all 12 Kaggle competition checks.
+- **SHA256**: `CC3D091FE6BC7F24A82C9465B4CA99077DBB878313073E8F0068E21D6F018129`
+
+---
+
+## Key Rules for Scoring Selection
+
+1. **Up to 2 Submissions**:
+   - Kaggle allows selecting up to **2 submissions** for final leaderboard scoring.
+   - For Phase 1, ensure your corrected submission is checked.
+2. **Phase 2 Transition (Sept 25, 16:00 Beijing = 13:30 IST)**:
+   - When the ranking set (1,000 scenes) is released, run single-model inference on both test (1,000) and ranking (1,000).
+   - The Phase 2 submission must contain **both** test and ranking predictions.
+   - Manually tick **"Use for final scoring"** on the combined Phase 2 submission on Kaggle.
